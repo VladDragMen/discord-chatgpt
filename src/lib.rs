@@ -65,13 +65,13 @@ async fn handler(msg: Message) {
         return;
     }
 
-    if content.eq_ignore_ascii_case("!prefixes") {
+    if content.eq_ignore_ascii_case("!префиксы") {
         let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
         let mut response = "Существующие префиксы:\n".to_string();
         for (id, prefix) in prefixes.iter() {
             let user_name = match id.as_str() { // Пример условия, здесь вы можете добавить логику для получения имени пользователя по ID
-                "585734874699399188" => "Пользователь1",
-                "524913624117149717" => "Пользователь2",
+                "585734874699399188" => "@vladvd91",
+                "524913624117149717" => "@boykising",
                 _ => "Неизвестный",
             };
             response.push_str(&format!("{}: {}\n", prefix, user_name));
