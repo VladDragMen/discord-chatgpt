@@ -76,11 +76,11 @@ async fn handler(msg: Message) {
         ..Default::default()
     };
 
-    // Если ID пользователя совпадает с вашим ID, изменяем текст сообщения
-    let response_prefix = if user_id.to_string() == "585734874699399188" {
-        "Хозяин, "
-    } else {
-        "" // Если это не вы, не добавляем никакого префикса
+    // Определяем префикс в зависимости от ID пользователя
+   let response_prefix = match msg.author.id.to_string().as_str() {
+        "585734874699399188" => "Хозяин, ",
+        "524913624117149717" => "Кисик, ",
+        _ => ""
     };
 
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
