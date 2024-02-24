@@ -32,9 +32,9 @@ async fn handler(msg: Message) {
     let channel_id = msg.channel_id;
     let content = msg.content;
 
-    // Триггер, чтобы реагировать только на сообщения, начинающиеся с "fox."
-    if !content.starts_with("Лисик") {
-        return; // Если сообщение не начинается с "fox.", функция завершается здесь
+    // Триггер, чтобы реагировать только на сообщения, начинающиеся с "!"
+    if !content.starts_with("!") {
+        return; // Если сообщение не начинается с "!", функция завершается здесь
     }
 
     if content.eq_ignore_ascii_case("/restart") {
