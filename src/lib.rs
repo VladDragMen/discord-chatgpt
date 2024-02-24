@@ -54,16 +54,26 @@ async fn handler(msg: Message) {
     }
 
     if content.eq_ignore_ascii_case("!restart") {
-        _ = discord.send_message(
-            channel_id.into(),
-            &serde_json::json!({
-                "content": "Хорошо, я начинаю новый разговор."
-            }),
-        ).await;
-        store::set(&channel_id.to_string(), json!(true), None);
-        log::info!("Restarted converstion for {}", channel_id);
-        return;
-    }
+    _ = discord.send_message(
+        channel_id.into(),
+        &serde_json::json!({
+            "embeds": [{
+                "author": {
+                    "name": "Ответ от Умного Лисёнка 🦊",
+                    "icon_url": "https://i.imgur.com/emgIscZ.png"
+                },
+                "description": "Хорошо, я начинаю новый разговор.",
+                "color": 3447003,
+                "footer": {
+                    "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
+                }
+            }]
+        }),
+    ).await;
+    store::set(&channel_id.to_string(), json!(true), None);
+    log::info!("Restarted conversation for {}", channel_id);
+    return;
+}
 
     if content.eq_ignore_ascii_case("!префиксы") {
     let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
@@ -96,6 +106,38 @@ async fn handler(msg: Message) {
             }]
         }),
     ).await;
+    return;
+}
+
+    if content.eq_ignore_ascii_case("!команды") {
+    let commands_description = serde_json::json!({
+        "embeds": [{
+            "author": {
+                "name": "Ответ от Умного Лисёнка 🦊",
+                "icon_url": "https://i.imgur.com/emgIscZ.png"
+            },
+            "title": "Список доступных команд",
+            "description": "Вот список команд, которые вы можете использовать:",
+            "fields": [
+                {
+                    "name": "!префиксы",
+                    "value": "Показывает список всех установленных префиксов и их владельцев.",
+                    "inline": false
+                },
+                {
+                    "name": "!restart",
+                    "value": "Перезапускает текущий разговор, начиная общение заново.",
+                    "inline": false
+                }
+            ],
+            "color": 3447003,
+            "footer": {
+                "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
+            }
+        }]
+    });
+
+    _ = discord.send_message(channel_id.into(), &commands_description).await;
     return;
 }
 
