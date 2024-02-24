@@ -66,25 +66,38 @@ async fn handler(msg: Message) {
     }
 
     if content.eq_ignore_ascii_case("!префиксы") {
-        let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
-        let mut response = "Существующие префиксы:\n".to_string();
-        for (id, prefix) in prefixes.iter() {
-            let user_name = match id.as_str() { // Пример условия, здесь вы можете добавить логику для получения имени пользователя по ID
-                "585734874699399188" => "@vladvd91",
-                "524913624117149717" => "@boykising",
-                _ => "Неизвестный",
-            };
-            response.push_str(&format!("{}: {}\n", prefix, user_name));
-        }
+    let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
+    let mut response = String::new();
 
-        _ = discord.send_message(
-            channel_id.into(),
-            &serde_json::json!({
-                "content": response
-            }),
-        ).await;
-        return;
+    for (id, prefix) in prefixes.iter() {
+        let user_name = match id.as_str() {
+            "585734874699399188" => "@vladvd91",
+            "524913624117149717" => "@boykising",
+            _ => "Неизвестный",
+        };
+        response.push_str(&format!("{}: {}\n", prefix, user_name));
     }
+
+    let response_formatted = format!("```elixir\n{}\n```", response);
+
+    _ = discord.send_message(
+        channel_id.into(),
+        &serde_json::json!({
+            "embeds": [{
+                "author": {
+                    "name": "Ответ от Умного Лисёнка 🦊",
+                    "icon_url": "https://i.imgur.com/emgIscZ.png"
+                },
+                "description": response_formatted,
+                "color": 3447003,
+                "footer": {
+                    "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
+                }
+            }]
+        }),
+    ).await;
+    return;
+}
 
     let restart = store::get(&channel_id.to_string())
         .and_then(|v| v.as_bool())
