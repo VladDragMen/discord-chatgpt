@@ -74,10 +74,7 @@ async fn handler(msg: Message) {
             _ = discord.edit_message(
                 channel_id.into(), placeholder.id.into(),
                 &serde_json::json!({
-    "content": format!("```elixir
-                        {}
-                        ```",
-                       r.choice)
+    "content": format!("```elixir\n{}\n```", r.choice)
                 }),
             ).await;
         }
