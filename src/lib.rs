@@ -65,6 +65,27 @@ async fn handler(msg: Message) {
         return;
     }
 
+    if content.eq_ignore_ascii_case("!prefixes") {
+        let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
+        let mut response = "Существующие префиксы:\n".to_string();
+        for (id, prefix) in prefixes.iter() {
+            let user_name = match id.as_str() { // Пример условия, здесь вы можете добавить логику для получения имени пользователя по ID
+                "585734874699399188" => "Пользователь1",
+                "524913624117149717" => "Пользователь2",
+                _ => "Неизвестный",
+            };
+            response.push_str(&format!("{}: {}\n", prefix, user_name));
+        }
+
+        _ = discord.send_message(
+            channel_id.into(),
+            &serde_json::json!({
+                "content": response
+            }),
+        ).await;
+        return;
+    }
+
     let restart = store::get(&channel_id.to_string())
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
@@ -88,28 +109,14 @@ async fn handler(msg: Message) {
         restart: restart,
         system_prompt: Some(&system_prompt),
         ..Default::default()
-    }
+    };
 
-    if content.eq_ignore_ascii_case("!prefixes") {
-        let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
-        let mut response = "Существующие префиксы:\n".to_string();
-        for (id, prefix) in prefixes.iter() {
-            let user_name = match id.as_str() { // Пример условия, здесь вы можете добавить логику для получения имени пользователя по ID
-                "585734874699399188" => "Пользователь1",
-                "524913624117149717" => "Пользователь2",
-                _ => "Неизвестный",
-            };
-            response.push_str(&format!("{}: {}\n", prefix, user_name));
-        }
-
-        _ = discord.send_message(
-            channel_id.into(),
-            &serde_json::json!({
-                "content": response
-            }),
-        ).await;
-        return;
-    }
+    // Определяем префикс в зависимости от ID пользователя
+   let response_prefix = match msg.author.id.to_string().as_str() {
+        "585734874699399188" => "Хозяин, ",
+        "524913624117149717" => "Кисик, ",
+        _ => ""
+    };
 
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
         Ok(r) => {
