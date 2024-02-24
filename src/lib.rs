@@ -29,6 +29,8 @@ async fn handler(msg: Message) {
         log::info!("ignored bot message");
         return;
     }
+
+    let user_id = msg.author.id; // Получаем ID пользователя, отправившего сообщение
     let channel_id = msg.channel_id;
     let content = msg.content;
 
@@ -74,25 +76,33 @@ async fn handler(msg: Message) {
         ..Default::default()
     };
 
+    // Если ID пользователя совпадает с вашим ID, изменяем текст сообщения
+    let response_prefix = if user_id.to_string() == "585734874699399188" {
+        "Хозяин, "
+    } else {
+        "" // Если это не вы, не добавляем никакого префикса
+    };
+
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
-    Ok(r) => {
-        _ = discord.edit_message(
-    channel_id.into(), placeholder.id.into(),
-    &serde_json::json!({
-        "content": "", // Явно очищаем исходное текстовое содержимое
-        "embeds": [{
-            "author": {
-                "name": "Ответ от Умного Лисёнка 🦊",
-                "icon_url": "https://i.imgur.com/emgIscZ.png" // Замените на URL вашей аватарки
-            },
-            "description": format!("```elixir\n{}\n```", r.choice),
-            "color": 3447003, // Голубой цвет рамки
-            "footer": {
-                "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
-            }
-        }]
-    }),
-).await;
+        Ok(r) => {
+            let response = format!("{}{}", response_prefix, r.choice);
+            _ = discord.edit_message(
+                channel_id.into(), placeholder.id.into(),
+                &serde_json::json!({
+                    "content": "", // Явно очищаем исходное текстовое содержимое
+                    "embeds": [{
+                        "author": {
+                            "name": "Ответ от Умного Лисёнка 🦊",
+                            "icon_url": "https://i.imgur.com/emgIscZ.png"
+                        },
+                        "description": format!("```elixir\n{}\n```", response),
+                        "color": 3447003,
+                        "footer": {
+                            "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
+                        }
+                    }]
+                }),
+            ).await;
     }
     Err(e) => {
         _ = discord.edit_message(
