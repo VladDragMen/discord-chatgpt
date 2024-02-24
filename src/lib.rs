@@ -8,7 +8,6 @@ use openai_flows::{
 use store_flows as store;
 use serde_json::json;
 
-//UP 25.02 
 use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
@@ -22,9 +21,6 @@ lazy_static! {
         m
     });
 }
-
-
-
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
@@ -92,9 +88,9 @@ async fn handler(msg: Message) {
         restart: restart,
         system_prompt: Some(&system_prompt),
         ..Default::default()
-    };
+    }
 
-    if content.eq_ignore_ascii_case("!префиксы") {
+    if content.eq_ignore_ascii_case("!prefixes") {
         let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
         let mut response = "Существующие префиксы:\n".to_string();
         for (id, prefix) in prefixes.iter() {
@@ -114,8 +110,6 @@ async fn handler(msg: Message) {
         ).await;
         return;
     }
-
-    };
 
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
         Ok(r) => {
@@ -147,4 +141,6 @@ async fn handler(msg: Message) {
         ).await;
         log::error!("OpenAI returns error: {}", e);
     }
+}
+
 }
