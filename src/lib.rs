@@ -20,8 +20,8 @@ pub async fn on_deploy() {
 async fn handler(msg: Message) {
     logger::init();
     let token = env::var("discord_token").unwrap();
-    let placeholder_text = env::var("placeholder").unwrap_or("Typing ...".to_string());
-    let system_prompt = env::var("system_prompt").unwrap_or("You are a helpful assistant answering questions on Discord.".to_string());
+    let placeholder_text = env::var("placeholder").unwrap_or("*Печатает...*".to_string());
+    let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
 
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
@@ -36,7 +36,7 @@ async fn handler(msg: Message) {
         _ = discord.send_message(
             channel_id.into(),
             &serde_json::json!({
-                "content": "Ok, I am starting a new conversation."
+                "content": "Хорошо, я начинаю новый разговор."
             }),
         ).await;
         store::set(&channel_id.to_string(), json!(true), None);
@@ -74,7 +74,8 @@ async fn handler(msg: Message) {
             _ = discord.edit_message(
                 channel_id.into(), placeholder.id.into(),
                 &serde_json::json!({
-                    "content": r.choice
+    "content": format!(">>> {}",
+                       r.choice)
                 }),
             ).await;
         }
