@@ -77,18 +77,19 @@ async fn handler(msg: Message) {
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
     Ok(r) => {
         _ = discord.edit_message(
-            channel_id.into(), placeholder.id.into(),
-            &serde_json::json!({
-                "embeds": [{
-                    "title": "Ответ от Умного Лисёнка",
-                    "description": format!("```elixir\n{}\n```", r.choice),
-                    "color": 3447003, // Голубой цвет рамки
-                    "footer": {
-                        "text": "https://discord.gg/vladvd91"
-                    }
-                }]
-            }),
-        ).await;
+    channel_id.into(), placeholder.id.into(),
+    &serde_json::json!({
+        "content": "", // Явно очищаем исходное текстовое содержимое
+        "embeds": [{
+            "title": "Ответ от Умного Лисёнка",
+            "description": format!("```elixir\n{}\n```", r.choice),
+            "color": 3447003, // Голубой цвет рамки
+            "footer": {
+                "text": "https://discord.gg/vladvd91"
+            }
+        }]
+    }),
+).await;
     }
     Err(e) => {
         _ = discord.edit_message(
