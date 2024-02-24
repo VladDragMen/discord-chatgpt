@@ -39,7 +39,7 @@ async fn handler(msg: Message) {
         return; // Если сообщение не начинается с "!", функция завершается здесь
     }
 
-    if content.eq_ignore_ascii_case("restart") {
+    if content.eq_ignore_ascii_case("!restart") {
         _ = discord.send_message(
             channel_id.into(),
             &serde_json::json!({
