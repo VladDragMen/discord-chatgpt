@@ -75,23 +75,30 @@ async fn handler(msg: Message) {
     };
 
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
-        Ok(r) => {
-            _ = discord.edit_message(
-                channel_id.into(), placeholder.id.into(),
-                &serde_json::json!({
-    "content": format!("```elixir\n{}\n```", r.choice)
-                }),
-            ).await;
-        }
-        Err(e) => {
-            _ = discord.edit_message(
-                channel_id.into(), placeholder.id.into(),
-                &serde_json::json!({
-                    "content": "Sorry, an error has occured. Please try again later!"
-                }),
-            ).await;
-            log::error!("OpenAI returns error: {}", e);
-        }
+    Ok(r) => {
+        _ = discord.edit_message(
+            channel_id.into(), placeholder.id.into(),
+            &serde_json::json!({
+                "embeds": [{
+                    "title": "Ответ от AI",
+                    "description": format!("```elixir\n{}\n```", r.choice),
+                    "color": 3447003, // Голубой цвет рамки
+                    "footer": {
+                        "text": "https://discord.gg/vladvd91"
+                    }
+                }]
+            }),
+        ).await;
     }
+    Err(e) => {
+        _ = discord.edit_message(
+            channel_id.into(), placeholder.id.into(),
+            &serde_json::json!({
+                "content": "Sorry, an error has occurred. Please try again later!"
+            }),
+        ).await;
+        log::error!("OpenAI returns error: {}", e);
+    }
+}
 
 }
