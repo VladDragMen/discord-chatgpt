@@ -20,7 +20,7 @@ pub async fn on_deploy() {
 async fn handler(msg: Message) {
     logger::init();
     let token = env::var("discord_token").unwrap();
-    let placeholder_text = env::var("placeholder").unwrap_or("*Печатает...*".to_string());
+    let placeholder_text = env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
     let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
 
     let bot = ProvidedBot::new(token);
@@ -37,7 +37,7 @@ async fn handler(msg: Message) {
         return; // Если сообщение не начинается с "!", функция завершается здесь
     }
 
-    if content.eq_ignore_ascii_case("/restart") {
+    if content.eq_ignore_ascii_case("restart") {
         _ = discord.send_message(
             channel_id.into(),
             &serde_json::json!({
@@ -80,7 +80,7 @@ async fn handler(msg: Message) {
             channel_id.into(), placeholder.id.into(),
             &serde_json::json!({
                 "embeds": [{
-                    "title": "Ответ от AI",
+                    "title": "Ответ от Умного Лисёнка",
                     "description": format!("```elixir\n{}\n```", r.choice),
                     "color": 3447003, // Голубой цвет рамки
                     "footer": {
