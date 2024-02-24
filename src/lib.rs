@@ -8,6 +8,24 @@ use openai_flows::{
 use store_flows as store;
 use serde_json::json;
 
+//UP 25.02 
+use std::collections::HashMap;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    // Используем Mutex для безопасного доступа в многопоточной среде
+    static ref PREFIXES: Mutex<HashMap<String, String>> = Mutex::new({
+        let mut m = HashMap::new();
+        m.insert("585734874699399188".to_string(), "Хозяин".to_string());
+        m.insert("524913624117149717".to_string(), "Кисик".to_string());
+        m
+    });
+}
+
+
+
+
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
 pub async fn on_deploy() {
@@ -76,11 +94,27 @@ async fn handler(msg: Message) {
         ..Default::default()
     };
 
-    // Определяем префикс в зависимости от ID пользователя
-   let response_prefix = match msg.author.id.to_string().as_str() {
-        "585734874699399188" => "Хозяин, ",
-        "524913624117149717" => "Кисик, ",
-        _ => ""
+    if content.eq_ignore_ascii_case("!префиксы") {
+        let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
+        let mut response = "Существующие префиксы:\n".to_string();
+        for (id, prefix) in prefixes.iter() {
+            let user_name = match id.as_str() { // Пример условия, здесь вы можете добавить логику для получения имени пользователя по ID
+                "585734874699399188" => "Пользователь1",
+                "524913624117149717" => "Пользователь2",
+                _ => "Неизвестный",
+            };
+            response.push_str(&format!("{}: {}\n", prefix, user_name));
+        }
+
+        _ = discord.send_message(
+            channel_id.into(),
+            &serde_json::json!({
+                "content": response
+            }),
+        ).await;
+        return;
+    }
+
     };
 
     match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
