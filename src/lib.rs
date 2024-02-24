@@ -148,5 +148,3 @@ async fn handler(msg: Message) {
         log::error!("OpenAI returns error: {}", e);
     }
 }
-
-}
