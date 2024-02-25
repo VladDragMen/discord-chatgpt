@@ -69,6 +69,16 @@ async fn handler(msg: Message) {
         return;
     }
 
+    // Проверяем, является ли канал личным
+    if msg.channel_id.is_private() { // Этот метод is_private() предполагается как пример, фактический метод может отличаться
+        let response = "Я не отвечаю на вопросы в личных сообщениях! Но вы можете задать мне их тут: https://discord.gg/vladvd91 ";
+        // Отправляем сообщение в личные сообщения пользователя
+        if let Err(e) = msg.reply(response).await {
+            log::error!("Ошибка при отправке сообщения в личные сообщения: {}", e);
+        }
+        return;
+    }
+
     // Обработка команд
     let user_id = msg.author.id; // Получаем ID пользователя
     let channel_id = msg.channel_id; // Получаем ID канала
