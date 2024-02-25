@@ -109,26 +109,32 @@ async fn handler(msg: Message) {
 
     // Показать список доступных команд
     if content.eq_ignore_ascii_case("!команды") {
-        let commands_description = create_embed(
-            "Вот список команд, которые вы можете использовать:",
-            Some("Список доступных команд"),
-            Some(vec![
-                serde_json::json!({
-                    "name": "!префиксы",
-                    "value": "Показывает список всех установленных префиксов и их владельцев.",
-                    "inline": false
-                }),
-                serde_json::json!({
-                    "name": "!рестарт",
-                    "value": "Перезапускает текущий разговор, начиная общение заново.",
-                    "inline": false
-                }),
-            ]),
-        );
+    let commands_description = create_embed(
+        "Вот список команд, которые вы можете использовать. Чтобы общаться с ботом, необходимо начнать сообщение с \"!\". Пример: !как создать воду:",
+        Some("Список доступных команд"),
+        Some(vec![
+            serde_json::json!({
+                "name": "!префиксы",
+                "value": "Показывает список всех установленных префиксов и их владельцев.",
+                "inline": false
+            }),
+            serde_json::json!({
+                "name": "!рестарт",
+                "value": "Перезапускает текущий разговор, начиная общение заново.",
+                "inline": false
+            }),
+            // Добавленный пункт
+            serde_json::json!({
+                "name": "Общение с ботом",
+                "value": "Чтобы общаться с ботом, необходимо начнать сообщение с \"!\". Пример: !как создать воду.",
+                "inline": false
+            }),
+        ]),
+    );
 
-        _ = discord.send_message(channel_id.into(), &commands_description).await;
-        return;
-    }
+    _ = discord.send_message(channel_id.into(), &commands_description).await;
+    return;
+}
 
     // Проверка и обработка состояния перезапуска разговора
     let restart = store::get(&channel_id.to_string())
