@@ -74,19 +74,6 @@ async fn handler(msg: Message) {
     let channel_id = msg.channel_id; // Получаем ID канала
     let content = msg.content; // Содержимое сообщения
 
-     // Отправить сообщение-заполнитель "Генерирую ответ..."
-    let placeholder_message = discord.send_message(
-        channel_id.into(),
-        &serde_json::json!({
-            "content": &placeholder_text
-        }),
-    ).await;
-    
-    if let Err(err) = placeholder_message {
-        log::error!("Failed to send placeholder message: {}", err);
-        return;
-    }
-
      // Проверяем, начинается ли сообщение с "!"
     if !content.starts_with("!") {
         return; // Если нет, прекращаем обработку
@@ -180,25 +167,35 @@ async fn handler(msg: Message) {
     };
     
     // Получение и обработка ответа от OpenAI
-   match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
+    match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
     Ok(r) => {
         let response = format!("{}{}", response_prefix, r.choice);
         let embed_message = create_embed(&format!("```elixir\n{}\n```", response), None, None);
-        if let Err(err) = discord.edit_message(
-            channel_id.into(), placeholder_message.unwrap().id.into(), &embed_message
+        
+        // Отправляем новое сообщение, заменяя старое
+        if let Err(err) = discord.send_message(
+            channel_id.into(),
+            &serde_json::json!({
+                "content": "", // Явно очищаем исходное текстовое содержимое
+                "embeds": [embed_message]
+            }),
         ).await {
-            log::error!("Failed to edit message: {}", err);
+            log::error!("Failed to send message: {}", err);
         }
     }
     Err(e) => {
         let error_message = create_embed("Извините, произошла ошибка. Пожалуйста, попробуйте позже.", None, None);
-        if let Err(err) = discord.edit_message(
-            channel_id.into(), placeholder_message.unwrap().id.into(), &error_message
+        
+        // Отправляем новое сообщение с текстом об ошибке, заменяя старое
+        if let Err(err) = discord.send_message(
+            channel_id.into(),
+            &serde_json::json!({
+                "content": "", // Явно очищаем исходное текстовое содержимое
+                "embeds": [error_message]
+            }),
         ).await {
-            log::error!("Failed to edit message: {}", err);
+            log::error!("Failed to send message: {}", err);
         }
         log::error!("OpenAI returns error: {}", e);
     }
-}
-
 }
