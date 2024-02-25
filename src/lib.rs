@@ -63,6 +63,19 @@ async fn handler(msg: Message) {
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
 
+    // Предположим, что у вас есть способ получить объект канала по `msg.channel_id`
+    let channel = discord.get_channel_info(msg.channel_id).await; // Это псевдокод
+
+    // Проверка на личное сообщение
+    if matches!(channel.kind, ChannelType::Private) {
+        let response = "Задавать вопросы можно только на сервере, где я нахожусь. Например тут https://discord.gg/vladvd91";
+        
+        // Отправка ответного сообщения
+        discord.send_message(msg.channel_id, &response).await; // Это псевдокод
+    } else {
+        // Обработка сообщений в каналах на сервере
+    }
+
     // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
