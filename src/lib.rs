@@ -107,26 +107,6 @@ async fn handler(msg: Message) {
     return;
 }
 
-    // Допустим, у вас уже есть функция `create_embed` и остальная часть вашего кода
-
-// Обработка команды !userinfo
-if content.eq_ignore_ascii_case("!userinfo") {
-    let user_id = &msg.author.id; // ID пользователя
-    let member_info = discord.get_member_info(user_id).await; // Предполагаемая функция для получения информации о члене сервера
-    
-    // Форматируем информацию о пользователе для отображения
-    let user_info = format!(
-        "Имя пользователя: {}\nРоли: {}\nДата создания аккаунта: {}\nДата вступления на сервер: {}",
-        member_info.name, // Имя пользователя
-        member_info.roles.join(", "), // Роли пользователя
-        member_info.account_creation_date, // Дата создания аккаунта
-        member_info.join_date // Дата вступления на сервер
-    );
-    
-    let embed_message = create_embed(&user_info, Some("Информация о пользователе"), None);
-    _ = discord.send_message(channel_id.into(), &embed_message).await;
-    return;
-}
     
     // Показать список доступных команд
     if content.eq_ignore_ascii_case("!команды") {
