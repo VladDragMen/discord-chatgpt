@@ -122,4 +122,3 @@ async fn handler(msg: Message) {
     }
 }
 
-}
