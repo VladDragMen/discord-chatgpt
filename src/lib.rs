@@ -166,44 +166,36 @@ async fn handler(msg: Message) {
     };
 
     // Получение и обработка ответа от OpenAI
-        match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
+            match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
         Ok(r) => {
-            // Удаляем сообщение-заполнитель
-            if let Err(err) = discord.delete_message(channel_id.into(), placeholder.id.into()).await {
-                log::error!("Failed to delete placeholder message: {}", err);
-            }
-    
             let response = format!("{}{}", response_prefix, r.choice);
             let embed_message = create_embed(&format!("```elixir\n{}\n```", response), None, None);
     
-            // Отправляем ответ от OpenAI
-            if let Err(err) = discord.send_message(
+            // Заменяем сообщение-заполнитель ответом от OpenAI
+            if let Err(err) = discord.edit_message(
                 channel_id.into(),
+                placeholder.id.into(),
                 &serde_json::json!({
                     "content": "", // Явно очищаем исходное текстовое содержимое
                     "embeds": [embed_message]
                 }),
             ).await {
-                log::error!("Failed to send message: {}", err);
+                log::error!("Failed to edit message: {}", err);
             }
         }
         Err(e) => {
-            // Удаляем сообщение-заполнитель
-            if let Err(err) = discord.delete_message(channel_id.into(), placeholder.id.into()).await {
-                log::error!("Failed to delete placeholder message: {}", err);
-            }
-    
             let error_message = create_embed("Извините, произошла ошибка. Пожалуйста, попробуйте позже.", None, None);
     
-            // Отправляем сообщение об ошибке
-            if let Err(err) = discord.send_message(
+            // Заменяем сообщение-заполнитель сообщением об ошибке
+            if let Err(err) = discord.edit_message(
                 channel_id.into(),
+                placeholder.id.into(),
                 &serde_json::json!({
                     "content": "", // Явно очищаем исходное текстовое содержимое
                     "embeds": [error_message]
                 }),
             ).await {
-                log::error!("Failed to send message: {}", err);
+                log::error!("Failed to edit message: {}", err);
             }
             log::error!("OpenAI returns error: {}", e);
         }
