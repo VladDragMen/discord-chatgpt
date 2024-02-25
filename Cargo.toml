@@ -2,8 +2,9 @@
 name = "discord-chatgpt"
 version = "0.1.0"
 edition = "2021"
+description = "Discord бот с интеграцией OpenAI для чата."
+authors = [" @vladvd91 <https://discord.gg/vladvd91>"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 path = "src/lib.rs"
 crate-type = ["cdylib"]
@@ -11,10 +12,23 @@ crate-type = ["cdylib"]
 [dependencies]
 discord-flows = "0.6"
 flowsnet-platform-sdk = "0.1"
-log = "0.4"
 openai-flows = "0.8"
 store-flows = "0.3"
 serde_json = "1"
-tokio_wasi = { version = "1.25.0", features = ["rt", "macros"] }
 dotenv = "0.15.0"
 lazy_static = "1.4.0"
+tokio_wasi = { version = "1.25.0", features = ["rt", "macros"], default-features = false }
+
+# Опциональная зависимость для улучшенного управления логированием
+[dependencies.log]
+version = "0.4"
+optional = true
+
+# Опциональные функции для включения логирования
+[features]
+default = []
+logging = ["log"]
+
+# Настройки для оптимизации компиляции в релизе
+[profile.release]
+opt-level = 3
