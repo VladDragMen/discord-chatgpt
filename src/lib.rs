@@ -63,21 +63,22 @@ async fn handler(msg: Message) {
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
 
+    // Предположим, что у нас есть способ проверить, что сообщение отправлено в ЛС
+    // Вам нужно заменить `is_dm()` на фактический метод или проверку, доступную в вашей библиотеке
+    if msg.channel_id.is_dm() { // Замените `is_dm()` на корректную проверку
+        let response = "Задавать вопросы можно только на сервере, где я нахожусь. Например тут https://discord.gg/vladvd91";
+
+        // Отправка сообщения в ответ. Замените `send_message` на корректный метод отправки сообщения
+        let _ = discord.send_message(msg.channel_id, &response).await;
+        return;
+    }
+
     // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
         return;
     }
 
-    // Проверяем, является ли канал личным
-    if msg.channel_id.is_private() { // Этот метод is_private() предполагается как пример, фактический метод может отличаться
-        let response = "Я не отвечаю на вопросы в личных сообщениях! Но вы можете задать мне их тут: https://discord.gg/vladvd91 ";
-        // Отправляем сообщение в личные сообщения пользователя
-        if let Err(e) = msg.reply(response).await {
-            log::error!("Ошибка при отправке сообщения в личные сообщения: {}", e);
-        }
-        return;
-    }
 
     // Обработка команд
     let user_id = msg.author.id; // Получаем ID пользователя
