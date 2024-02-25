@@ -5,6 +5,7 @@ edition = "2021"
 description = "Discord бот с интеграцией OpenAI для чата."
 authors = ["@vladvd91 <https://discord.gg/vladvd91>"]
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 path = "src/lib.rs"
 crate-type = ["cdylib"]
@@ -18,11 +19,7 @@ serde_json = "1"
 dotenv = "0.15.0"
 lazy_static = "1.4.0"
 tokio_wasi = { version = "1.25.0", features = ["rt", "macros"], default-features = false }
-log = { version = "0.4", optional = true }
-
-[features]
-default = []
-logging = ["log"]
+log = "0.4"
 
 [profile.release]
 opt-level = 3
