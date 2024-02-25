@@ -1,11 +1,14 @@
 use std::env;
-use discord_flows::{model::Message, Bot, ProvidedBot, message_handler, channel, ChannelType, ChannelId};
+use discord_flows::{model::Message, Bot, ProvidedBot, message_handler};
 use flowsnet_platform_sdk::logger;
 use openai_flows::{
     chat::{ChatModel, ChatOptions},
     OpenAIFlows,
 };
 use store_flows as store;
+
+use discord_flows::model::channel::ChannelType;
+use discord_flows::model::ChannelId;
 use serde_json::json;
 
 use std::collections::HashMap;
@@ -63,17 +66,19 @@ async fn handler(msg: Message) {
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
 
-    // Предположим, что у вас есть способ получить объект канала по `msg.channel_id`
-    let channel = discord.get_channel_info(msg.channel_id).await; // Это псевдокод
+     // Преобразование ChannelId в u64
+    let channel_id = msg.channel_id.0; // Предполагается, что ChannelId имеет поле или метод для преобразования в u64
 
-    // Проверка на личное сообщение
-    if matches!(channel.kind, ChannelType::Private) {
-        let response = "Задавать вопросы можно только на сервере, где я нахожусь. Например тут https://discord.gg/vladvd91";
-        
-        // Отправка ответного сообщения
-        discord.send_message(msg.channel_id, &response).await; // Это псевдокод
-    } else {
-        // Обработка сообщений в каналах на сервере
+    // Использование get_channel для получения информации о канале
+    let channel_info = discord.get_channel(channel_id).await.unwrap(); // Обработайте ошибку надлежащим образом
+
+    if let ChannelType::Private = channel_info.kind {
+        let response = json!({
+            "content": "Задавать вопросы можно только на сервере, где я нахожусь. Например тут https://discord.gg/vladvd91"
+        });
+
+        // Отправка сообщения
+        discord.send_message(channel_id, &response).await.unwrap(); // Обработайте ошибку надлежащим образом
     }
 
     // Игнорируем сообщения от ботов
