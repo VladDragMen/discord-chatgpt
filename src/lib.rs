@@ -69,57 +69,6 @@ async fn handler(msg: Message) {
         return; // Если нет, прекращаем обработку
     }
     
-    // Обработка команды перезапуска
-    if content.eq_ignore_ascii_case("!рестарт") {
-    let embed_message = create_embed("Хорошо, я начинаю новый разговор.", None, None);
-    _ = discord.send_message(channel_id.into(), &embed_message).await;
-    store::set(&channel_id.to_string(), json!(true), None);
-    log::info!("Restarted conversation for {}", channel_id);
-    return;
-}
-    
-    // Показать список префиксов
-    if content.eq_ignore_ascii_case("!префиксы") {
-    let prefixes = PREFIXES.lock().unwrap();
-    let mut response = String::new();
-
-    for (id, prefix) in prefixes.iter() {
-        let user_name = match id.as_str() {
-            "585734874699399188" => "@vladvd91",
-            "524913624117149717" => "@boykising",
-            _ => "Неизвестный",
-        };
-        response.push_str(&format!("{}: {}\n", prefix, user_name));
-    }
-
-    let embed_message = create_embed(&response, Some("Список префиксов"), None);
-    _ = discord.send_message(channel_id.into(), &embed_message).await;
-    return;
-}
-    
-    // Показать список доступных команд
-    if content.eq_ignore_ascii_case("!команды") {
-    let commands_description = create_embed(
-        "Вот список команд, которые вы можете использовать:",
-        Some("Список доступных команд"),
-        Some(vec![
-            serde_json::json!({
-                "name": "!префиксы",
-                "value": "Показывает список всех установленных префиксов и их владельцев.",
-                "inline": false
-            }),
-            serde_json::json!({
-                "name": "!рестарт",
-                "value": "Перезапускает текущий разговор, начиная общение заново.",
-                "inline": false
-            }),
-        ])
-    );
-
-    _ = discord.send_message(channel_id.into(), &commands_description).await;
-    return;
-}
-    
     // Проверка и обработка состояния перезапуска разговора
     let restart = store::get(&channel_id.to_string())
         .and_then(|v| v.as_bool())
