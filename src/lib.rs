@@ -63,16 +63,11 @@ async fn handler(msg: Message) {
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
 
-        // Отправка сообщения
-        discord.send_message(channel_id, &response).await.unwrap(); // Обработайте ошибку надлежащим образом
-    }
-
     // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
         return;
     }
-
 
     // Обработка команд
     let user_id = msg.author.id; // Получаем ID пользователя
@@ -115,7 +110,7 @@ async fn handler(msg: Message) {
     // Показать список доступных команд
     if content.eq_ignore_ascii_case("!команды") {
     let commands_description = create_embed(
-        "Вот список команд, которые вы можете использовать. Чтобы общаться с ботом, необходимо начнать сообщение с \"!\". Пример: !как создать воду:",
+        "Вот список команд, которые вы можете использовать:",
         Some("Список доступных команд"),
         Some(vec![
             serde_json::json!({
