@@ -23,7 +23,23 @@ lazy_static! {
     });
 }
 
-mod commands;
+fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde_json::Value>>) -> serde_json::Value {
+    serde_json::json!({
+        "embeds": [{
+            "author": {
+                "name": "Ответ от Умного Лисёнка 🦊",
+                "icon_url": "https://i.imgur.com/emgIscZ.png"
+            },
+            "title": title.unwrap_or(""),
+            "description": description,
+            "color": 3447003,
+            "fields": fields.unwrap_or_else(Vec::new),
+            "footer": {
+                "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
+            }
+        }]
+    })
+}
 
 // Основная точка входа в асинхронную задачу
 #[no_mangle]
@@ -37,27 +53,21 @@ pub async fn on_deploy() {
 // Обработчик входящих сообщений
 #[message_handler]
 async fn handler(msg: Message) {
-    logger::init(); // Инициализация логгера
+    logger::init();// Инициализация логгера
+    let token = env::var("discord_token").unwrap();
+    
+     // Значения по умолчанию для текста-заполнителя и системного приглашения
+    let placeholder_text = env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
+    let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
 
-    // Значения по умолчанию для текста-заполнителя и системного приглашения
-    let placeholder_text = std::env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
-    let system_prompt = std::env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
-
-    let token = std::env::var("discord_token").unwrap();
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
-
+    
     // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
         return;
     }
-
-    // Обработка команд с использованием функции handle_command из модуля commands
-    if let Err(e) = commands::handle_command(&msg, &discord, &placeholder_text, &system_prompt).await {
-        log::error!("Ошибка при обработке команды: {}", e);
-    }
-}
     
     // Обработка команд
     let user_id = msg.author.id; // Получаем ID пользователя
@@ -68,6 +78,57 @@ async fn handler(msg: Message) {
     if !content.starts_with("!") {
         return; // Если нет, прекращаем обработку
     }
+    
+    // Обработка команды перезапуска
+    if content.eq_ignore_ascii_case("!рестарт") {
+    let embed_message = create_embed("Хорошо, я начинаю новый разговор.", None, None);
+    _ = discord.send_message(channel_id.into(), &embed_message).await;
+    store::set(&channel_id.to_string(), json!(true), None);
+    log::info!("Restarted conversation for {}", channel_id);
+    return;
+}
+    
+    // Показать список префиксов
+    if content.eq_ignore_ascii_case("!префиксы") {
+    let prefixes = PREFIXES.lock().unwrap();
+    let mut response = String::new();
+
+    for (id, prefix) in prefixes.iter() {
+        let user_name = match id.as_str() {
+            "585734874699399188" => "@vladvd91",
+            "524913624117149717" => "@boykising",
+            _ => "Неизвестный",
+        };
+        response.push_str(&format!("{}: {}\n", prefix, user_name));
+    }
+
+    let embed_message = create_embed(&response, Some("Список префиксов"), None);
+    _ = discord.send_message(channel_id.into(), &embed_message).await;
+    return;
+}
+    
+    // Показать список доступных команд
+    if content.eq_ignore_ascii_case("!команды") {
+    let commands_description = create_embed(
+        "Вот список команд, которые вы можете использовать:",
+        Some("Список доступных команд"),
+        Some(vec![
+            serde_json::json!({
+                "name": "!префиксы",
+                "value": "Показывает список всех установленных префиксов и их владельцев.",
+                "inline": false
+            }),
+            serde_json::json!({
+                "name": "!рестарт",
+                "value": "Перезапускает текущий разговор, начиная общение заново.",
+                "inline": false
+            }),
+        ])
+    );
+
+    _ = discord.send_message(channel_id.into(), &commands_description).await;
+    return;
+}
     
     // Проверка и обработка состояния перезапуска разговора
     let restart = store::get(&channel_id.to_string())
@@ -122,3 +183,4 @@ async fn handler(msg: Message) {
     }
 }
 
+}
