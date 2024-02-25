@@ -23,23 +23,7 @@ lazy_static! {
     });
 }
 
-fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde_json::Value>>) -> serde_json::Value {
-    serde_json::json!({
-        "embeds": [{
-            "author": {
-                "name": "Ответ от Умного Лисёнка 🦊",
-                "icon_url": "https://i.imgur.com/emgIscZ.png"
-            },
-            "title": title.unwrap_or(""),
-            "description": description,
-            "color": 3447003,
-            "fields": fields.unwrap_or_else(Vec::new),
-            "footer": {
-                "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
-            }
-        }]
-    })
-}
+mod commands;
 
 // Основная точка входа в асинхронную задачу
 #[no_mangle]
@@ -53,21 +37,27 @@ pub async fn on_deploy() {
 // Обработчик входящих сообщений
 #[message_handler]
 async fn handler(msg: Message) {
-    logger::init();// Инициализация логгера
-    let token = env::var("discord_token").unwrap();
-    
-     // Значения по умолчанию для текста-заполнителя и системного приглашения
-    let placeholder_text = env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
-    let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
+    logger::init(); // Инициализация логгера
 
+    // Значения по умолчанию для текста-заполнителя и системного приглашения
+    let placeholder_text = std::env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
+    let system_prompt = std::env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
+
+    let token = std::env::var("discord_token").unwrap();
     let bot = ProvidedBot::new(token);
     let discord = bot.get_client();
-    
+
     // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
         return;
     }
+
+    // Обработка команд с использованием функции handle_command из модуля commands
+    if let Err(e) = commands::handle_command(&msg, &discord, &placeholder_text, &system_prompt).await {
+        log::error!("Ошибка при обработке команды: {}", e);
+    }
+}
     
     // Обработка команд
     let user_id = msg.author.id; // Получаем ID пользователя
