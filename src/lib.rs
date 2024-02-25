@@ -1,136 +1,187 @@
+use std::env;
 use discord_flows::{model::Message, Bot, ProvidedBot, message_handler};
 use flowsnet_platform_sdk::logger;
-use openai_flows::{chat::{ChatModel, ChatOptions}, OpenAIFlows};
-use serde_json::{json, Value};
-use std::{collections::HashMap, env, sync::Mutex};
+use openai_flows::{
+    chat::{ChatModel, ChatOptions},
+    OpenAIFlows,
+};
+use store_flows as store;
+use serde_json::json;
+
+use std::collections::HashMap;
+use std::sync::Mutex;
 use lazy_static::lazy_static;
 
+// Инициализация глобального хранилища для префиксов с использованием Mutex для потокобезопасного доступа
 lazy_static! {
-    static ref PREFIXES: Mutex<HashMap<String, String>> = Mutex::new(HashMap::from([
-        ("585734874699399188".to_string(), "Хозяин".to_string()),
-        ("524913624117149717".to_string(), "Кисик".to_string()),
-    ]));
+    // Используем Mutex для безопасного доступа в многопоточной среде
+    static ref PREFIXES: Mutex<HashMap<String, String>> = Mutex::new({
+        let mut m = HashMap::new();
+        m.insert("585734874699399188".to_string(), "Хозяин".to_string());
+        m.insert("524913624117149717".to_string(), "Кисик".to_string());
+        m
+    });
 }
 
-const EMBED_COLOR: i32 = 3447003;
-const DEFAULT_DESCRIPTION: &str = "*Генерирую ответ...*";
-const SYSTEM_PROMPT: &str = "Вы — полезный ассистент, отвечающий на вопросы в Discord.";
-const DISCORD_INVITE_LINK: &str = "https://discord.gg/vladvd91";
-
-fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<Value>>) -> Value {
-    json!({
+fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde_json::Value>>) -> serde_json::Value {
+    serde_json::json!({
         "embeds": [{
             "author": {
                 "name": "Ответ от Умного Лисёнка 🦊",
                 "icon_url": "https://i.imgur.com/emgIscZ.png"
             },
-            "title": title.unwrap_or_default(),
+            "title": title.unwrap_or(""),
             "description": description,
-            "color": EMBED_COLOR,
-            "fields": fields.unwrap_or_default(),
+            "color": 3447003,
+            "fields": fields.unwrap_or_else(Vec::new),
             "footer": {
-                "text": format!("Присоединяйтесь к нам! 🌟 {}", DISCORD_INVITE_LINK)
+                "text": "Присоединяйтесь к нам! 🌟 https://discord.gg/vladvd91"
             }
         }]
     })
 }
 
+// Основная точка входа в асинхронную задачу
+#[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
-    let token = env::var("discord_token").expect("Expected a token in the environment");
+pub async fn on_deploy() {
+    let token = std::env::var("discord_token").unwrap();
     let bot = ProvidedBot::new(token);
-    bot.listen_to_messages(handler).await;
+    bot.listen_to_messages().await;
 }
 
+// Обработчик входящих сообщений
 #[message_handler]
 async fn handler(msg: Message) {
-    logger::init();
+    logger::init();// Инициализация логгера
+    let token = env::var("discord_token").unwrap();
     
+     // Значения по умолчанию для текста-заполнителя и системного приглашения
+    let placeholder_text = env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
+    let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
+
+    let bot = ProvidedBot::new(token);
+    let discord = bot.get_client();
+    
+    // Игнорируем сообщения от ботов
     if msg.author.bot {
         log::info!("ignored bot message");
         return;
     }
     
-    if !msg.content.starts_with("!") {
-        return;
+    // Обработка команд
+    let user_id = msg.author.id; // Получаем ID пользователя
+    let channel_id = msg.channel_id; // Получаем ID канала
+    let content = msg.content; // Содержимое сообщения
+
+     // Проверяем, начинается ли сообщение с "!"
+    if !content.starts_with("!") {
+        return; // Если нет, прекращаем обработку
     }
     
-    let discord = ProvidedBot::new(env::var("discord_token").unwrap()).get_client();
-    let channel_id = msg.channel_id;
+    // Обработка команды перезапуска
+    if content.eq_ignore_ascii_case("!рестарт") {
+    let embed_message = create_embed("Хорошо, я начинаю новый разговор.", None, None);
+    _ = discord.send_message(channel_id.into(), &embed_message).await;
+    store::set(&channel_id.to_string(), json!(true), None);
+    log::info!("Restarted conversation for {}", channel_id);
+    return;
+}
     
-match msg.content.to_lowercase().as_str() {
-        "!рестарт" => handle_restart(&discord, &channel_id).await,
-        "!префиксы" => show_prefixes(&discord, &channel_id).await,
-        "!команды" => show_commands(&discord, &channel_id).await,
-        _ => log::info!("Unknown command: {}", msg.content),
-    }
-}
-
-async fn handle_restart(discord: &Bot, channel_id: &str) {
-    // Example implementation. Adapt based on actual logic.
-    let embed_message = create_embed("Перезапуск беседы.", None, None);
-    let _ = discord.send_message(channel_id.into(), &embed_message).await;
-}
-
-async fn show_prefixes(discord: &Bot, channel_id: &str) {
+    // Показать список префиксов
+    if content.eq_ignore_ascii_case("!префиксы") {
     let prefixes = PREFIXES.lock().unwrap();
-    let response = prefixes.iter().map(|(id, prefix)| format!("{}: {}", id, prefix)).collect::<Vec<_>>().join("\n");
+    let mut response = String::new();
+
+    for (id, prefix) in prefixes.iter() {
+        let user_name = match id.as_str() {
+            "585734874699399188" => "@vladvd91",
+            "524913624117149717" => "@boykising",
+            _ => "Неизвестный",
+        };
+        response.push_str(&format!("{}: {}\n", prefix, user_name));
+    }
+
     let embed_message = create_embed(&response, Some("Список префиксов"), None);
-    let _ = discord.send_message(channel_id.into(), &embed_message).await;
+    _ = discord.send_message(channel_id.into(), &embed_message).await;
+    return;
 }
 
-async fn show_commands(discord: &Bot, channel_id: &str) {
+    
+    // Показать список доступных команд
+    if content.eq_ignore_ascii_case("!команды") {
     let commands_description = create_embed(
         "Вот список команд, которые вы можете использовать:",
         Some("Список доступных команд"),
         Some(vec![
-            json!({"name": "!префиксы", "value": "Показывает список всех установленных префиксов и их владельцев.", "inline": false}),
-            json!({"name": "!рестарт", "value": "Перезапускает текущий разговор, начиная общение заново.", "inline": false}),
+            serde_json::json!({
+                "name": "!префиксы",
+                "value": "Показывает список всех установленных префиксов и их владельцев.",
+                "inline": false
+            }),
+            serde_json::json!({
+                "name": "!рестарт",
+                "value": "Перезапускает текущий разговор, начиная общение заново.",
+                "inline": false
+            }),
         ])
     );
-    let _ = discord.send_message(channel_id.into(), &commands_description).await;
-}
 
-match msg.content.to_lowercase().as_str() {
-    "!рестарт" => handle_restart(&discord, &channel_id).await,
-    "!префиксы" => show_prefixes(&discord, &channel_id).await,
-    "!команды" => show_commands(&discord, &channel_id).await,
-    // Добавление обработки команды для взаимодействия с OpenAI
-    _ => handle_openai_response(&discord, &msg).await,
+    _ = discord.send_message(channel_id.into(), &commands_description).await;
+    return;
 }
-
-// Добавим функцию `handle_openai_response`
-async fn handle_openai_response(discord: &Bot, msg: &Message) {
-    let channel_id = msg.channel_id.to_string();
-    let content = &msg.content;
     
-    let placeholder = discord.send_message(
-        &channel_id,
-        &serde_json::json!({"content": DEFAULT_DESCRIPTION}),
-    ).await.expect("Failed to send placeholder message");
-
-    let mut openai = OpenAIFlows::new(); // Инициализация клиента OpenAI
+    // Проверка и обработка состояния перезапуска разговора
+    let restart = store::get(&channel_id.to_string())
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if restart {
+        log::info!("Detected restart = true");
+        store::set(&channel_id.to_string(), json!(false), None);
+    }
+    
+    // Отправка сообщения-заполнителя перед получением ответа от OpenAI
+    let placeholder  = discord.send_message(
+        channel_id.into(),
+        &serde_json::json!({
+            "content": &placeholder_text
+        }),
+    ).await.unwrap();
+    
+    // Инициализация клиента OpenAI и настройка опций для чата
+    let mut openai = OpenAIFlows::new();
     openai.set_retry_times(3);
-
     let co = ChatOptions {
+        // model: ChatModel::GPT4,
         model: ChatModel::GPT35Turbo, // Выбор модели чата
-        restart: false,
-        system_prompt: Some(SYSTEM_PROMPT),
+        restart: restart,
+        system_prompt: Some(&system_prompt),
         ..Default::default()
     };
 
-    let response_prefix = PREFIXES.lock().unwrap().get(&msg.author.id.to_string()).unwrap_or(&"".to_string()).to_string();
-
-    match openai.chat_completion(&channel_id, content, &co).await {
-        Ok(r) => {
-            let response = format!("{}{}", response_prefix, r.choice);
-            let embed_message = create_embed(&format!("```{}\n```", response), None, None);
-            let _ = discord.edit_message(&channel_id, &placeholder.id.into(), &embed_message).await;
-        }
-        Err(e) => {
-            let error_message = create_embed("Извините, произошла ошибка. Пожалуйста, попробуйте позже.", None, None);
-            let _ = discord.edit_message(&channel_id, &placeholder.id.into(), &error_message).await;
-            log::error!("OpenAI returns error: {}", e);
-        }
+    // Определение префикса ответа в зависимости от ID пользователя
+   let response_prefix = match msg.author.id.to_string().as_str() {
+        "585734874699399188" => "Хозяин, ",
+        "524913624117149717" => "Кисик, ",
+        _ => ""
+    };
+    
+    // Получение и обработка ответа от OpenAI
+    match openai.chat_completion(&channel_id.to_string(), &content, &co).await {
+    Ok(r) => {
+        let response = format!("{}{}", response_prefix, r.choice);
+        let embed_message = create_embed(&format!("```elixir\n{}\n```", response), None, None);
+        _ = discord.edit_message(
+            channel_id.into(), placeholder.id.into(), &embed_message
+        ).await;
     }
+    Err(e) => {
+        let error_message = create_embed("Извините, произошла ошибка. Пожалуйста, попробуйте позже.", None, None);
+        _ = discord.edit_message(
+            channel_id.into(), placeholder.id.into(), &error_message
+        ).await;
+        log::error!("OpenAI returns error: {}", e);
+    }
+}
+
 }
