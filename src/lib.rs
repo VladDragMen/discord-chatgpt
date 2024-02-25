@@ -106,23 +106,6 @@ async fn handler(msg: Message) {
     _ = discord.send_message(channel_id.into(), &embed_message).await;
     return;
 }
-
-    if content.eq_ignore_ascii_case("!пользователь") {
-    let member = discord.get_member(guild_id, user_id).await.unwrap();
-    let user_name = member.user.name;
-    let joined_at = member.joined_at.unwrap();
-    let roles = member.roles.iter().map(|role_id| {
-        discord.get_role(guild_id, *role_id).await.unwrap().name
-    }).collect::<Vec<String>>().join(", ");
-    
-    let embed_message = create_embed(
-        &format!("Информация о пользователе:\nНик: {}\nПрисоединился: {}\nРоли: {}", user_name, joined_at, roles),
-        Some("Информация о пользователе"),
-        None
-    );
-    
-    _ = discord.send_message(channel_id.into(), &embed_message).await;
-}
     
     // Показать список доступных команд
     if content.eq_ignore_ascii_case("!команды") {
