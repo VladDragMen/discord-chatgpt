@@ -140,7 +140,7 @@ async fn handler(msg: Message) {
     
     if content.starts_with("!всем ") {
         // Проверяем, соответствует ли ID пользователя авторизованному ID
-        if msg.author.id == authorized_user_id {
+         if msg.author.id.to_string() == authorized_user_id.to_string() {
             // Извлекаем сообщение без команды
             let message_to_send = content.trim_start_matches("!всем ").to_string();
             if message_to_send.is_empty() {
