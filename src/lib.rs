@@ -135,11 +135,12 @@ async fn handler(msg: Message) {
     _ = discord.send_message(channel_id.into(), &commands_description).await;
     return;
 }
-
+    
+    let authorized_user_id: u64 = 585734874699399188;
+    
     if content.starts_with("!всем ") {
-        // Проверяем, совпадает ли ID пользователя с заданным
-        let user_id = msg.author.id; // Предполагаем, что `id` это уже u64, как обычно в Discord API
-        if user_id.to_string() == "585734874699399188" {
+        // Проверяем, соответствует ли ID пользователя авторизованному ID
+        if msg.author.id == authorized_user_id {
             // Извлекаем сообщение без команды
             let message_to_send = content.trim_start_matches("!всем ").to_string();
             if message_to_send.is_empty() {
@@ -161,10 +162,10 @@ async fn handler(msg: Message) {
                     "content": &message_to_send
                 })).await;
             }
-            log::info!("Message sent to all specified channels by 585734874699399188: {}", message_to_send);
+            log::info!("Message sent to all specified channels by authorized user: {}", message_to_send);
             return;
         } else {
-            // Сообщение об ошибке, если пользователь не имеет права использовать команду
+            // Сообщение об ошибке, если пользователь не авторизован использовать команду
             let error_message = create_embed("Ошибка: у вас нет прав использовать эту команду.", None, None);
             _ = discord.send_message(channel_id.into(), &error_message).await;
             return;
