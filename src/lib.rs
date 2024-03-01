@@ -136,6 +136,45 @@ async fn handler(msg: Message) {
     return;
 }
 
+    // Обработка команды отправки сообщения в определенные каналы
+    if content.starts_with("!всем ") {
+        // Проверяем, имеет ли пользователь необходимый префикс
+        let user_id = msg.author.id.to_string();
+        let prefixes = PREFIXES.lock().unwrap(); // Безопасно получаем доступ к префиксам
+        if let Some(prefix) = prefixes.get(&user_id) {
+            if prefix == "Хозяин" {
+                // Извлекаем сообщение без команды
+                let message_to_send = content.trim_start_matches("!всем ").to_string();
+                if message_to_send.is_empty() {
+                    let error_message = create_embed("Ошибка: сообщение не может быть пустым.", None, None);
+                    _ = discord.send_message(channel_id.into(), &error_message).await;
+                    return;
+                }
+
+                // Список идентификаторов каналов, в которые нужно отправить сообщение
+                let channel_ids = vec![
+                    "123456789012345678", // Примеры ID каналов
+                    "876543210987654321",
+                    // Добавьте дополнительные ID каналов по необходимости
+                ];
+
+                // Отправляем сообщение в каждый канал из списка
+                for channel_id in channel_ids {
+                    let _ = discord.send_message(channel_id.into(), &serde_json::json!({
+                        "content": &message_to_send
+                    })).await;
+                }
+                log::info!("Message sent to all specified channels by Хозяин: {}", message_to_send);
+                return;
+            } else {
+                // Сообщение об ошибке, если пользователь не имеет необходимого префикса
+                let error_message = create_embed("Ошибка: у вас нет прав использовать эту команду.", None, None);
+                _ = discord.send_message(channel_id.into(), &error_message).await;
+                return;
+            }
+        }
+    }
+
     // Проверка и обработка состояния перезапуска разговора
     let restart = store::get(&channel_id.to_string())
         .and_then(|v| v.as_bool())
