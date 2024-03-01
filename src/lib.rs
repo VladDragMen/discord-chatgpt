@@ -136,31 +136,6 @@ async fn handler(msg: Message) {
     return;
 }
 
-    let content = msg.content.trim(); // Получаем содержимое сообщения и убираем пробелы по краям
-
-    // Проверяем, начинается ли сообщение с команды "!напиши "
-    if content.starts_with("!напиши ") {
-        // Извлекаем текст после команды
-        let message_to_send = content.strip_prefix("!напиши ").unwrap_or("");
-
-        // Проверка на пустое сообщение
-        if message_to_send.is_empty() {
-            let error_message = create_embed("Ошибка: сообщение не может быть пустым.", None, None);
-            _ = discord.send_message(msg.channel_id.into(), &error_message).await;
-            return;
-        }
-
-        // Формируем сообщение для отправки
-        let formatted_message = format!("Цитата:\n> {}", message_to_send);
-
-        // Отправляем сформированное сообщение в тот же канал
-        let _ = discord.send_message(msg.channel_id.into(), &serde_json::json!({
-            "content": formatted_message
-        })).await;
-
-        return; // Завершаем обработку команды
-    }
-
     // Проверка и обработка состояния перезапуска разговора
     let restart = store::get(&channel_id.to_string())
         .and_then(|v| v.as_bool())
