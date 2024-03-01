@@ -135,41 +135,30 @@ async fn handler(msg: Message) {
     _ = discord.send_message(channel_id.into(), &commands_description).await;
     return;
 }
-    
-    let authorized_user_id: u64 = 585734874699399188;
-    
-    if content.starts_with("!всем ") {
-        // Проверяем, соответствует ли ID пользователя авторизованному ID
-         if msg.author.id.to_string() == authorized_user_id.to_string() {
-            // Извлекаем сообщение без команды
-            let message_to_send = content.trim_start_matches("!всем ").to_string();
-            if message_to_send.is_empty() {
-                let error_message = create_embed("Ошибка: сообщение не может быть пустым.", None, None);
-                _ = discord.send_message(channel_id.into(), &error_message).await;
-                return;
-            }
 
-            // Список идентификаторов каналов, в которые нужно отправить сообщение
-            let channel_ids = vec![
-                "1210488007556202496", // Примеры ID каналов
-                "1189215297530515569",
-                // Добавьте дополнительные ID каналов по необходимости
-            ];
+    let content = msg.content.trim(); // Получаем содержимое сообщения и убираем пробелы по краям
 
-            // Отправляем сообщение в каждый канал из списка
-            for channel_id in channel_ids {
-                let _ = discord.send_message(channel_id.into(), &serde_json::json!({
-                    "content": &message_to_send
-                })).await;
-            }
-            log::info!("Message sent to all specified channels by authorized user: {}", message_to_send);
-            return;
-        } else {
-            // Сообщение об ошибке, если пользователь не авторизован использовать команду
-            let error_message = create_embed("Ошибка: у вас нет прав использовать эту команду.", None, None);
-            _ = discord.send_message(channel_id.into(), &error_message).await;
+    // Проверяем, начинается ли сообщение с команды "!напиши "
+    if content.starts_with("!напиши ") {
+        // Извлекаем текст после команды
+        let message_to_send = content.strip_prefix("!напиши ").unwrap_or("");
+
+        // Проверка на пустое сообщение
+        if message_to_send.is_empty() {
+            let error_message = create_embed("Ошибка: сообщение не может быть пустым.", None, None);
+            _ = discord.send_message(msg.channel_id.into(), &error_message).await;
             return;
         }
+
+        // Формируем сообщение для отправки
+        let formatted_message = format!("Цитата:\n> {}", message_to_send);
+
+        // Отправляем сформированное сообщение в тот же канал
+        let _ = discord.send_message(msg.channel_id.into(), &serde_json::json!({
+            "content": formatted_message
+        })).await;
+
+        return; // Завершаем обработку команды
     }
 
     // Проверка и обработка состояния перезапуска разговора
