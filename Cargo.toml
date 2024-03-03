@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 discord-flows = "0.6"
+rand = "0.8.3"
 flowsnet-platform-sdk = "0.1"
 openai-flows = "0.8"
 store-flows = "0.3"
