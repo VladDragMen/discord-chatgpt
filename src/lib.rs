@@ -117,6 +117,22 @@ async fn handler(msg: Message) {
         return;
     }
 
+    if content.starts_with("!обнять") {
+        let content_trimmed = content.trim_start_matches("!обнять").trim(); // Удаляем команду и лишние пробелы
+        if !content_trimmed.is_empty() {
+            // Проверяем, что после команды что-то есть
+            let response = format!("{} обнял милашку {}.", msg.author.name, content_trimmed);
+            let embed_message = create_embed(&response, None, None);
+            _ = discord.send_message(channel_id.into(), &embed_message).await;
+        } else {
+            // Если пользователь не указан, отправляем сообщение об ошибке
+            let response = "Пожалуйста, укажите пользователя для обнимашек! Пример: !обнять @username";
+            let embed_message = create_embed(response, None, None);
+            _ = discord.send_message(channel_id.into(), &embed_message).await;
+        }
+        return;
+    }
+
     // Показать список доступных команд
     if content.eq_ignore_ascii_case("!команды") {
     let commands_description = create_embed(
