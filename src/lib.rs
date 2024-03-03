@@ -12,6 +12,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
+use std::time::{Duration, Instant};
 
 // Инициализация глобального хранилища для префиксов с использованием Mutex для потокобезопасного доступа
 lazy_static! {
@@ -22,7 +23,9 @@ lazy_static! {
         m.insert("524913624117149717".to_string(), "Кисик".to_string());
         m
     });
+    static ref LAST_USED_FURRY: Mutex<HashMap<String, Instant>> = Mutex::new(HashMap::new());
 }
+
 
 fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde_json::Value>>) -> serde_json::Value {
     serde_json::json!({
@@ -109,13 +112,35 @@ async fn handler(msg: Message) {
     }
 
     if content.eq_ignore_ascii_case("!фурри") {
-        let mut rng = rand::thread_rng();
-        let furry_percentage: i32 = rng.gen_range(50..=10000); // Генерируем случайное число от 50 до 10000
-        let response = format!("Ты фурри на {}%", furry_percentage);
-        let embed_message = create_embed(&response, None, None);
-        _ = discord.send_message(channel_id.into(), &embed_message).await;
-        return;
+    let user_id = msg.author.id.to_string(); // Идентификатор пользователя как ключ
+    let now = Instant::now();
+
+    let mut last_used = LAST_USED_FURRY.lock().unwrap(); // Безопасный доступ к хранилищу
+    let cooldown_duration = Duration::from_secs(30 * 60); // Установка интервала ожидания в 30 минут
+
+    if let Some(last_time) = last_used.get(&user_id) {
+        if now.duration_since(*last_time) < cooldown_duration {
+            // Проверка, прошло ли меньше 30 минут с последнего использования
+            let wait_time = cooldown_duration - now.duration_since(*last_time);
+            let minutes_left = wait_time.as_secs() / 60;
+            let seconds_left = wait_time.as_secs() % 60;
+            let response = format!("Вы можете использовать команду !фурри через {} минут {} секунд.", minutes_left, seconds_left);
+            let embed_message = create_embed(&response, None, None);
+            _ = discord.send_message(channel_id.into(), &embed_message).await;
+            return;
+        }
     }
+
+    // Обновление времени последнего использования команды для пользователя
+    last_used.insert(user_id, now);
+
+    // Генерация случайного числа и отправка ответа
+    let mut rng = rand::thread_rng();
+    let furry_percentage: i32 = rng.gen_range(50..=10000); // Генерируем случайное число от 50 до 10000
+    let response = format!("Ты фурри на {}%", furry_percentage);
+    let embed_message = create_embed(&response, None, None);
+    _ = discord.send_message(channel_id.into(), &embed_message).await;
+}
 
     if content.starts_with("!обнять") {
         let content_trimmed = content.trim_start_matches("!обнять").trim(); // Удаляем команду и лишние пробелы
