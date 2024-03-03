@@ -1,4 +1,5 @@
 use std::env;
+use rand::Rng;
 use discord_flows::{model::Message, Bot, ProvidedBot, message_handler};
 use flowsnet_platform_sdk::logger;
 use openai_flows::{
@@ -103,6 +104,15 @@ async fn handler(msg: Message) {
         }
 
         let embed_message = create_embed(&response, Some("Список префиксов"), None);
+        _ = discord.send_message(channel_id.into(), &embed_message).await;
+        return;
+    }
+
+    if content.eq_ignore_ascii_case("!фурри") {
+        let mut rng = rand::thread_rng();
+        let furry_percentage: i32 = rng.gen_range(50..=10000); // Генерируем случайное число от 50 до 10000
+        let response = format!("Ты фурри на {}%", furry_percentage);
+        let embed_message = create_embed(&response, None, None);
         _ = discord.send_message(channel_id.into(), &embed_message).await;
         return;
     }
