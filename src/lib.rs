@@ -1,31 +1,40 @@
 use std::env;
+use rand::Rng;
+use discord_flows::{model::Message, Bot, ProvidedBot, message_handler};
+use flowsnet_platform_sdk::logger;
+use openai_flows::{
+    chat::{ChatModel, ChatOptions},
+    OpenAIFlows,
+};
+use store_flows as store;
+use serde_json::json;
+
 use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 use std::time::{Duration, Instant};
-use discord_flows::{model::Message, Bot, ProvidedBot, message_handler};
-use flowsnet_platform_sdk::logger;
-use openai_flows::{chat::{ChatModel, ChatOptions}, OpenAIFlows};
-use store_flows as store;
-use serde_json::json;
 
+// Инициализация глобального хранилища для префиксов с использованием Mutex для потокобезопасного доступа
 lazy_static! {
+    // Используем Mutex для безопасного доступа в многопоточной среде
     static ref PREFIXES: Mutex<HashMap<String, String>> = Mutex::new({
         let mut m = HashMap::new();
         m.insert("585734874699399188".to_string(), "Хозяин".to_string());
         m.insert("524913624117149717".to_string(), "Кисик".to_string());
         m
     });
+    static ref LAST_USED_FURRY: Mutex<HashMap<String, Instant>> = Mutex::new(HashMap::new());
 }
 
+
 fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde_json::Value>>) -> serde_json::Value {
-    json!({
+    serde_json::json!({
         "embeds": [{
             "author": {
                 "name": "Ответ от Умного Лисёнка 🦊",
                 "icon_url": "https://i.imgur.com/emgIscZ.png"
             },
-            "title": title.unwrap_or_default(),
+            "title": title.unwrap_or(""),
             "description": description,
             "color": 3447003,
             "fields": fields.unwrap_or_else(Vec::new),
@@ -36,83 +45,125 @@ fn create_embed(description: &str, title: Option<&str>, fields: Option<Vec<serde
     })
 }
 
+// Основная точка входа в асинхронную задачу
+#[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
-    logger::init(); // Инициализация логгера один раз
-    let token = env::var("discord_token").expect("Expected a token in the environment");
+pub async fn on_deploy() {
+    let token = std::env::var("discord_token").unwrap();
     let bot = ProvidedBot::new(token);
     bot.listen_to_messages().await;
 }
 
+// Обработчик входящих сообщений
 #[message_handler]
 async fn handler(msg: Message) {
+    logger::init(); // Инициализация логгера
+    let token = env::var("discord_token").unwrap();
+
+    // Значения по умолчанию для текста-заполнителя и системного приглашения
+    let placeholder_text = env::var("placeholder").unwrap_or("*Генерирую ответ...*".to_string());
+    let system_prompt = env::var("system_prompt").unwrap_or("Вы — полезный ассистент, отвечающий на вопросы в Discord.".to_string());
+
+    let bot = ProvidedBot::new(token);
+    let discord = bot.get_client();
+
+    // Игнорируем сообщения от ботов
     if msg.author.bot {
+        log::info!("ignored bot message");
         return;
     }
 
-    let discord = ProvidedBot::new(env::var("discord_token").unwrap()).get_client();
-    let content = msg.content.trim();
+    // Обработка команд
+    let user_id = msg.author.id; // Получаем ID пользователя
+    let channel_id = msg.channel_id; // Получаем ID канала
+    let content = msg.content; // Содержимое сообщения
 
+    // Проверяем, начинается ли сообщение с "!"
     if !content.starts_with("!") {
+        return; // Если нет, прекращаем обработку
+    }
+
+    // Обработка команды перезапуска
+    if content.eq_ignore_ascii_case("!рестарт") {
+        let embed_message = create_embed("Хорошо, я начинаю новый разговор.", None, None);
+        _ = discord.send_message(channel_id.into(), &embed_message).await;
+        store::set(&channel_id.to_string(), json!(true), None);
+        log::info!("Restarted conversation for {}", channel_id);
         return;
     }
 
-    match content.to_lowercase().as_str() {
-        "!рестарт" => handle_restart(&discord, &msg).await,
-        "!префиксы" => show_prefixes(&discord, &msg).await,
-        "!фурри" => handle_furry(&discord, &msg).await,
-        "!обнять" => handle_hug(&discord, &msg, content).await,
-        "!команды" => show_commands(&discord, &msg).await,
-        _ => return,
+    // Показать список префиксов
+    if content.eq_ignore_ascii_case("!префиксы") {
+        let prefixes = PREFIXES.lock().unwrap();
+        let mut response = String::new();
+
+        for (id, prefix) in prefixes.iter() {
+            let user_name = match id.as_str() {
+                "585734874699399188" => "@vladvd91",
+                "524913624117149717" => "@boykising",
+                _ => "Неизвестный",
+            };
+            response.push_str(&format!("{}: {}\n", prefix, user_name));
+        }
+
+        let embed_message = create_embed(&response, Some("Список префиксов"), None);
+        _ = discord.send_message(channel_id.into(), &embed_message).await;
+        return;
     }
-}
 
-async fn handle_restart(discord: &ProvidedBotClient, msg: &Message) {
-    let embed_message = create_embed("Хорошо, я начинаю новый разговор.", None, None);
-    discord.send_message(msg.channel_id.into(), &embed_message).await.unwrap();
-    store::set(&msg.channel_id.to_string(), json!(true), None).unwrap();
-}
+    if content.eq_ignore_ascii_case("!фурри") {
+        let mut rng = rand::thread_rng();
+        let furry_percentage: i32 = rng.gen_range(50..=10000); // Генерируем случайное число от 50 до 10000
+        let response = format!("Ты фурри на {}%", furry_percentage);
+        let embed_message = create_embed(&response, None, None);
+        _ = discord.send_message(channel_id.into(), &embed_message).await;
+        return;
+    }
 
-async fn show_prefixes(discord: &ProvidedBotClient, msg: &Message) {
-    let prefixes = PREFIXES.lock().unwrap();
-    let response = prefixes.iter()
-        .map(|(id, prefix)| format!("{}: @{}", prefix, id))
-        .collect::<Vec<_>>()
-        .join("\n");
+    
+    if content.starts_with("!обнять") {
+        let content_trimmed = content.trim_start_matches("!обнять").trim(); // Удаляем команду и лишние пробелы
+        if !content_trimmed.is_empty() {
+            // Проверяем, что после команды что-то есть
+            let response = format!("{} обнял милашку {}.", msg.author.name, content_trimmed);
+            let embed_message = create_embed(&response, None, None);
+            _ = discord.send_message(channel_id.into(), &embed_message).await;
+        } else {
+            // Если пользователь не указан, отправляем сообщение об ошибке
+            let response = "Пожалуйста, укажите пользователя для обнимашек! Пример: !обнять @username";
+            let embed_message = create_embed(response, None, None);
+            _ = discord.send_message(channel_id.into(), &embed_message).await;
+        }
+        return;
+    }
 
-    let embed_message = create_embed(&response, Some("Список префиксов"), None);
-    discord.send_message(msg.channel_id.into(), &embed_message).await.unwrap();
-}
-
-async fn handle_furry(discord: &ProvidedBotClient, msg: &Message) {
-    let furry_percentage: i32 = rand::thread_rng().gen_range(50..=100);
-    let response = format!("Ты фурри на {}%", furry_percentage);
-    let embed_message = create_embed(&response, None, None);
-    discord.send_message(msg.channel_id.into(), &embed_message).await.unwrap();
-}
-
-async fn handle_hug(discord: &ProvidedBotClient, msg: &Message, content: &str) {
-    let target = content.strip_prefix("!обнять").unwrap_or("").trim();
-    let response = if !target.is_empty() {
-        format!("{} обнял милашку {}.", msg.author.name, target)
-    } else {
-        "Пожалуйста, укажите пользователя для обнимашек! Пример: !обнять @username".to_string()
-    };
-    let embed_message = create_embed(&response, None, None);
-    discord.send_message(msg.channel_id.into(), &embed_message).await.unwrap();
-}
-
-async fn show_commands(discord: &ProvidedBotClient, msg: &Message) {
+    // Показать список доступных команд
+    if content.eq_ignore_ascii_case("!команды") {
     let commands_description = create_embed(
         "Вот список команд, которые вы можете использовать:",
         Some("Список доступных команд"),
         Some(vec![
-            json!({"name": "!префиксы", "value": "Показывает список всех установленных префиксов и их владельцев.", "inline": false}),
-            json!({"name": "!рестарт", "value": "Перезапускает текущий разговор, начиная общение заново.", "inline": false}),
-            json!({"name": "Общение с ботом", "value": "Чтобы общаться с ботом, необходимо начнать сообщение с \"!\". Пример: !как создать воду.", "inline": false}),
+            serde_json::json!({
+                "name": "!префиксы",
+                "value": "Показывает список всех установленных префиксов и их владельцев.",
+                "inline": false
+            }),
+            serde_json::json!({
+                "name": "!рестарт",
+                "value": "Перезапускает текущий разговор, начиная общение заново.",
+                "inline": false
+            }),
+            // Добавленный пункт
+            serde_json::json!({
+                "name": "Общение с ботом",
+                "value": "Чтобы общаться с ботом, необходимо начнать сообщение с \"!\". Пример: !как создать воду.",
+                "inline": false
+            }),
         ]),
     );
-    discord.send_message(msg.channel_id.into(), &commands_description).await.unwrap();
+
+    _ = discord.send_message(channel_id.into(), &commands_description).await;
+    return;
 }
 
     // Проверка и обработка состояния перезапуска разговора
