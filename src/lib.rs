@@ -187,8 +187,8 @@ async fn handler(msg: Message) {
     let mut openai = OpenAIFlows::new();
     openai.set_retry_times(3);
     let co = ChatOptions {
-        // model: ChatModel::GPT4,
-        model: ChatModel::GPT35Turbo, // Выбор модели чата
+        model: ChatModel::GPT4,
+        // model: ChatModel::GPT35Turbo, // Выбор модели чата
         restart: restart,
         system_prompt: Some(&system_prompt),
         ..Default::default()
