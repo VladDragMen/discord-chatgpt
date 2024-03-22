@@ -12,7 +12,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 // Инициализация глобального хранилища для префиксов с использованием Mutex для потокобезопасного доступа
 lazy_static! {
