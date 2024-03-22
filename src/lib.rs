@@ -200,6 +200,7 @@ async fn handler(msg: Message) {
     let response_prefix = match msg.author.id.to_string().as_str() {
         "585734874699399188" => "Хозяин, ",
         "524913624117149717" => "Кисик, ",
+        "457149063884963862" => "Титан, ",
         _ => ""
     };
 
