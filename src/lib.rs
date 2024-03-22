@@ -21,6 +21,7 @@ lazy_static! {
         let mut m = HashMap::new();
         m.insert("585734874699399188".to_string(), "Хозяин".to_string());
         m.insert("524913624117149717".to_string(), "Кисик".to_string());
+        m.insert("457149063884963862".to_string(), "Титан".to_string());
         m
     });
     static ref LAST_USED_FURRY: Mutex<HashMap<String, Instant>> = Mutex::new(HashMap::new());
@@ -101,6 +102,7 @@ async fn handler(msg: Message) {
             let user_name = match id.as_str() {
                 "585734874699399188" => "@vladvd91",
                 "524913624117149717" => "@boykising",
+                "457149063884963862" => "@kesama.",
                 _ => "Неизвестный",
             };
             response.push_str(&format!("{}: {}\n", prefix, user_name));
